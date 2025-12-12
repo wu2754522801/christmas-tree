@@ -586,8 +586,22 @@
             ctx.fillStyle = "#880000"; ctx.beginPath();
             for (let i = -128; i < 256; i += 32) { ctx.moveTo(i, 0); ctx.lineTo(i + 32, 128); ctx.lineTo(i + 16, 128); ctx.lineTo(i - 16, 0); }
             ctx.fill();
-            caneTexture = new THREE.CanvasTexture(canvas);
-            caneTexture.wrapS = THREE.RepeatWrapping; caneTexture.wrapT = THREE.RepeatWrapping; caneTexture.repeat.set(3, 3);
+        caneTexture = new THREE.CanvasTexture(canvas);
+        caneTexture.wrapS = THREE.RepeatWrapping; caneTexture.wrapT = THREE.RepeatWrapping; caneTexture.repeat.set(3, 3);
+    }
+
+        // --- 新增辅助函数：创建星星形状 ---
+        function createStarShape(outerRadius, innerRadius, points) {
+            const shape = new THREE.Shape();
+            const step = Math.PI / points;
+            shape.moveTo(0, outerRadius);
+            for (let i = 0; i < 2 * points; i++) {
+                const r = (i % 2 === 0) ? outerRadius : innerRadius;
+                const a = i * step;
+                shape.lineTo(r * Math.sin(a), r * Math.cos(a));
+            }
+            shape.closePath();
+            return shape;
         }
 
         // --- PARTICLE SYSTEM ---
@@ -660,9 +674,27 @@
                 const s = 0.4 + Math.random() * 0.5; mesh.scale.set(s, s, s); mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
                 mainGroup.add(mesh); particleSystem.push(new Particle(mesh, type, false));
             }
-            const starGeo = new THREE.OctahedronGeometry(1.2, 0);
-            const starMat = new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0xffaa00, emissiveIntensity: 1.0, metalness: 1.0, roughness: 0 });
-            const star = new THREE.Mesh(starGeo, starMat); star.position.set(0, CONFIG.particles.treeHeight / 2 + 1.2, 0);
+            // --- 顶部星星：五角星挤压体 ---
+            const starShape = createStarShape(1.5, 0.7, 5);
+            const extrudeSettings = {
+                depth: 0.4,
+                bevelEnabled: true,
+                bevelThickness: 0.1,
+                bevelSize: 0.1,
+                bevelSegments: 3
+            };
+            const starGeo = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
+            const starMat = new THREE.MeshStandardMaterial({
+                color: 0xffdd88,
+                emissive: 0xffaa00,
+                emissiveIntensity: 1.0,
+                metalness: 1.0,
+                roughness: 0.1
+            });
+            const star = new THREE.Mesh(starGeo, starMat);
+            // Keep star upright facing camera; slight yaw for depth
+            star.rotation.set(0, Math.PI / 10, 0);
+            star.position.set(0, CONFIG.particles.treeHeight / 2 + 1.1, 0);
             mainGroup.add(star);
             mainGroup.add(photoMeshGroup);
         }
