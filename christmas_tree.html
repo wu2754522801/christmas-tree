@@ -931,13 +931,44 @@
         }
 
         function takeScreenshot() {
+            // Render latest frame to buffer
             composer.render();
-            const dataURL = renderer.domElement.toDataURL("image/png");
-            const link = document.createElement('a');
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            link.download = `Christmas-Memory-${timestamp}.png`;
-            link.href = dataURL;
-            link.click();
+
+            // Base WebGL capture
+            const baseDataURL = renderer.domElement.toDataURL("image/png");
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+
+                // Draw WebGL frame
+                ctx.drawImage(img, 0, 0);
+
+                // Overlay title only (skip buttons/hints)
+                const titleEl = document.querySelector("#ui-layer h1");
+                const title = titleEl?.innerText?.trim() || "Merry Christmas";
+                if (title) {
+                    const fontSize = Math.max(48, Math.min(120, canvas.width * 0.045));
+                    ctx.font = `${fontSize}px "Cinzel", "Times New Roman", serif`;
+                    ctx.fillStyle = "rgba(252, 238, 167, 0.9)";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "top";
+                    ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
+                    ctx.shadowBlur = fontSize * 0.2;
+                    ctx.fillText(title, canvas.width / 2, fontSize * 0.35);
+                    ctx.shadowBlur = 0;
+                }
+
+                const finalURL = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                link.download = `Christmas-Memory-${timestamp}.png`;
+                link.href = finalURL;
+                link.click();
+            };
+            img.src = baseDataURL;
         }
 
         function animate() {
